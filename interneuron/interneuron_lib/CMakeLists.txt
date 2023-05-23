@@ -16,16 +16,16 @@ if(${INTERNEURON})
 endif()
 
 find_package(ament_cmake REQUIRED)
-find_package(rclcpp REQUIRED)
+#find_package(rclcpp REQUIRED)
 find_package(interneuron_msgs REQUIRED)
 
 set(SOURCES
-  "src/interneuron_monitor.cpp"
+  "src/time_point_manager.cpp"
 )
 
 add_library(${PROJECT_NAME} ${SOURCES})
 
-ament_target_dependencies(${PROJECT_NAME} rclcpp interneuron_msgs)
+ament_target_dependencies(${PROJECT_NAME} interneuron_msgs)
 install(DIRECTORY include/${PROJECT_NAME}/
   DESTINATION include/${PROJECT_NAME}/
 )

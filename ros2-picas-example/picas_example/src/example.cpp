@@ -11,6 +11,7 @@
 #include <sys/syscall.h>
 #include <mutex>
 
+#include <iostream>
 #include "trace_picas/trace.hpp"
 
 #include "rclcpp/rclcpp.hpp"
@@ -31,7 +32,7 @@ using std::placeholders::_1;
 //#define USE_INTRA_PROCESS_COMMS false
 #define USE_INTRA_PROCESS_COMMS true
 
-#define DUMMY_LOAD_ITER	1000
+#define DUMMY_LOAD_ITER	100
 int dummy_load_calib = 1;
 
 void dummy_load(int load_ms) {
@@ -97,6 +98,8 @@ private:
             latency_time.tv_usec = (ftime.tv_usec - message.stamp.usec);                
             //trace_callbacks_->trace_write_count(name+"_latency",std::to_string(latency_time.tv_sec*1000000+latency_time.tv_usec), message.data);  
         }   
+
+std::cout<<"publish time in us:"<<ctime.tv_sec*1000000+ctime.tv_usec<<std::endl;
         publisher_->publish(message);
     }        
 };
@@ -126,7 +129,9 @@ private:
     bool end_flag_;
 #ifdef INTERNEURON
     void callback(const test_msgs::msg::TestString::SharedPtr msg, const rclcpp::MessageInfo & msg_info) {
-        RCLCPP_INFO(this->get_logger(), "msg_info source time: %ld, seq_num:%ld, received time:%ld,seq_num:%ld", msg_info.get_rmw_message_info().source_timestamp,msg_info.get_rmw_message_info().publication_sequence_number, msg_info.get_rmw_message_info().received_timestamp,msg_info.get_rmw_message_info().reception_sequence_number);
+        gettimeofday(&ctime, NULL);            
+        std::cout<<"receive time in callback:"<<ctime.tv_sec*1000000+ctime.tv_usec<<std::endl;
+        std::cout<<"msg_info source time: "<<msg_info.get_rmw_message_info().source_timestamp<<", seq_num:"<<msg_info.get_rmw_message_info().publication_sequence_number<<", received time:"<<msg_info.get_rmw_message_info().received_timestamp<<",seq_num:"<<msg_info.get_rmw_message_info().reception_sequence_number<<std::endl;
         std::string name = this->get_name();
         RCLCPP_INFO(this->get_logger(), ("callback: " + name).c_str());
         //gettimeofday(&ctime, NULL);            
@@ -180,7 +185,7 @@ int main(int argc, char * argv[])
     eprosima::fastrtps::Log::RegisterConsumer(std::unique_ptr<eprosima::fastrtps::LogConsumer>(&stdout_consumer));
 
     // Set the log verbosity level
-    eprosima::fastrtps::Log::SetVerbosity(eprosima::fastrtps::Log::Kind::Error);
+    eprosima::fastrtps::Log::SetVerbosity(eprosima::fastrtps::Log::Kind::Info);
 
 
     rclcpp::init(argc, argv);
@@ -212,8 +217,8 @@ const char *rmw_implementation = rmw_get_implementation_identifier();
     // Create callbacks
     auto c1_t_cb = std::make_shared<StartNode>("Timer_callback", "c1", trace_callbacks, 1000, 10000, false);
     auto c1_r_cb_1 = std::make_shared<IntermediateNode>("Regular_callback1", "c1", "", trace_callbacks, 1000, true);
-    auto c1_r_cb_2 = std::make_shared<IntermediateNode>("Regular_callback2", "c1", "", trace_callbacks, 1000, true);
-    auto c1_r_cb_3 = std::make_shared<IntermediateNode>("Regular_callback3", "c1", "", trace_callbacks, 1000, true);    
+    //auto c1_r_cb_2 = std::make_shared<IntermediateNode>("Regular_callback2", "c1", "", trace_callbacks, 1000, true);
+    //auto c1_r_cb_3 = std::make_shared<IntermediateNode>("Regular_callback3", "c1", "", trace_callbacks, 1000, true);    
     //auto c1_r_cb_1 = std::make_shared<IntermediateNode>("Regular_callback1", "c1", "c2", trace_callbacks, 1000, true);
     //auto c1_r_cb_2 = std::make_shared<IntermediateNode>("Regular_callback2", "c2", "c3", trace_callbacks, 1000, true);
     //auto c1_r_cb_3 = std::make_shared<IntermediateNode>("Regular_callback3", "c3", "c4", trace_callbacks, 1000, true);
@@ -234,8 +239,8 @@ const char *rmw_implementation = rmw_get_implementation_identifier();
     // Allocate callbacks to executors
     exec1.add_node(c1_t_cb);
     exec1.add_node(c1_r_cb_1);
-    exec1.add_node(c1_r_cb_2);    
-    exec1.add_node(c1_r_cb_3);    
+    //exec1.add_node(c1_r_cb_2);    
+    //exec1.add_node(c1_r_cb_3);    
 
 
 #ifdef PICAS
@@ -258,8 +263,8 @@ const char *rmw_implementation = rmw_get_implementation_identifier();
 
     exec1.remove_node(c1_t_cb);
     exec1.remove_node(c1_r_cb_1);
-    exec1.remove_node(c1_r_cb_2);    
-    exec1.remove_node(c1_r_cb_3);    
+    //exec1.remove_node(c1_r_cb_2);    
+    //exec1.remove_node(c1_r_cb_3);    
 
     rclcpp::shutdown();
     RCLCPP_INFO(rclcpp::get_logger("rclcpp"),"Close successfully");
