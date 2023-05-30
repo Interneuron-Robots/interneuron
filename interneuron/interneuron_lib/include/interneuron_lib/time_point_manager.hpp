@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Sauron
  * @Date: 2023-05-10 16:33:52
- * @LastEditTime: 2023-05-22 23:15:09
+ * @LastEditTime: 2023-05-23 10:09:54
  * @LastEditors: Sauron
  */
 
@@ -41,7 +41,7 @@ namespace interneuron
 		TimePointManager &operator=(TimePointManager &&) = delete;	// Move assignment operator
 
 		INTERNEURON_PUBLIC
-		bool add_timepoint(const std::string &topic_name, const std::string &node_name, std::vector<std::string> &sensor_names);
+		bool add_timepoint(const std::string &topic_name, const std::string &node_name, const std::vector<std::string> &sensor_names);
 		
 // we cannot use message_info directly, so it's rmw, rcl and rclcpp's job to provide needed information
 		INTERNEURON_PUBLIC

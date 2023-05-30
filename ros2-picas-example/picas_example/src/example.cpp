@@ -19,7 +19,7 @@
 #include "test_msgs/msg/test_string.hpp"
 //#include "test_msgs/msg/detail/test_string__struct.hpp"
 #ifdef INTERNEURON
-#include "interneuron_lib/interneuron_monitor.hpp"
+#include "interneuron_lib/time_point_manager.hpp"
 using std::placeholders::_2;
 #endif
 using std::placeholders::_1;
@@ -67,9 +67,6 @@ public:
 private:
     size_t count_;
     int exe_time_;
-    #ifdef INTERNEURON
-#include "interneuron_lib/interneuron_monitor.hpp"
-#endif
     int period_;
     timeval ctime, ftime, create_timer, latency_time;
     bool end_flag_;
@@ -100,6 +97,9 @@ private:
         }   
 
 std::cout<<"publish time in us:"<<ctime.tv_sec*1000000+ctime.tv_usec<<std::endl;
+#ifdef INTERNEURON
+interneuron::TimePointManager::getInstance().default_update("c1", "Timer_callback");
+#endif
         publisher_->publish(message);
     }        
 };
@@ -130,6 +130,7 @@ private:
 #ifdef INTERNEURON
     void callback(const test_msgs::msg::TestString::SharedPtr msg, const rclcpp::MessageInfo & msg_info) {
         gettimeofday(&ctime, NULL);            
+interneuron::TimePointManager::getInstance().default_update("c1", "Regular_callback1");
         std::cout<<"receive time in callback:"<<ctime.tv_sec*1000000+ctime.tv_usec<<std::endl;
         std::cout<<"msg_info source time: "<<msg_info.get_rmw_message_info().source_timestamp<<", seq_num:"<<msg_info.get_rmw_message_info().publication_sequence_number<<", received time:"<<msg_info.get_rmw_message_info().received_timestamp<<",seq_num:"<<msg_info.get_rmw_message_info().reception_sequence_number<<std::endl;
         std::string name = this->get_name();
@@ -198,17 +199,16 @@ const char *rmw_implementation = rmw_get_implementation_identifier();
         timeval ctime, ftime;
         int duration_us;
         gettimeofday(&ctime, NULL);
-        dummy_load(100); // 100ms
+        dummy_load(100); // 50ms
         gettimeofday(&ftime, NULL);
         duration_us = (ftime.tv_sec - ctime.tv_sec) * 1000000 + (ftime.tv_usec - ctime.tv_usec);
-        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "dummy_load_calib: %d (duration_us: %d ns)", dummy_load_calib, duration_us);
+        //RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "dummy_load_calib: %d (duration_us: %d ns)", dummy_load_calib, duration_us);
         if (abs(duration_us - 100 * 1000) < 500) { // error margin: 500us
             break;
         }
         dummy_load_calib = 100 * 1000 * dummy_load_calib / duration_us;
         if (dummy_load_calib <= 0) dummy_load_calib = 1;
     }
-
     timeval ctime;
     gettimeofday(&ctime, NULL);
     std::shared_ptr<trace::Trace> trace_callbacks = std::make_shared<trace::Trace>("data/trace.txt");
@@ -217,6 +217,10 @@ const char *rmw_implementation = rmw_get_implementation_identifier();
     // Create callbacks
     auto c1_t_cb = std::make_shared<StartNode>("Timer_callback", "c1", trace_callbacks, 1000, 10000, false);
     auto c1_r_cb_1 = std::make_shared<IntermediateNode>("Regular_callback1", "c1", "", trace_callbacks, 1000, true);
+    #ifdef INTERNEURON
+    interneuron::TimePointManager::getInstance().add_timepoint("c1", "Timer_callback", {"c1_sensor"});
+    interneuron::TimePointManager::getInstance().add_timepoint("c1", "Regular_callback1", {"c1_sensor"});
+    #endif
     //auto c1_r_cb_2 = std::make_shared<IntermediateNode>("Regular_callback2", "c1", "", trace_callbacks, 1000, true);
     //auto c1_r_cb_3 = std::make_shared<IntermediateNode>("Regular_callback3", "c1", "", trace_callbacks, 1000, true);    
     //auto c1_r_cb_1 = std::make_shared<IntermediateNode>("Regular_callback1", "c1", "c2", trace_callbacks, 1000, true);

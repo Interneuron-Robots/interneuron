@@ -19,7 +19,7 @@
 //#include "test_msgs/msg/detail/test_string__struct.hpp"
 
 #ifdef INTERNEURON
-#include "interneuron_lib/interneuron_monitor.hpp"
+#include "interneuron_lib/time_point_manager.hpp"
 #endif
 
 using std::placeholders::_1;
