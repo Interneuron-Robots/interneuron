@@ -99,8 +99,12 @@ private:
 std::cout<<"publish time in us:"<<ctime.tv_sec*1000000+ctime.tv_usec<<std::endl;
 #ifdef INTERNEURON
 interneuron::TimePointManager::getInstance().default_update("c1", "Timer_callback");
-#endif
+auto message_info = std::make_unique<rclcpp::MessageInfo>(rclcpp::MessageInfo());
+message_info->get_rmw_message_info().source_timestamp = static_cast<int64_t>(ctime.tv_sec*1000000+ctime.tv_usec);
+        publisher_->publish(message,std::make_unique<rclcpp::MessageInfo>(rclcpp::MessageInfo()));
+#else
         publisher_->publish(message);
+#endif
     }        
 };
 
