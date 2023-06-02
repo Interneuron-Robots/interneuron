@@ -2,13 +2,13 @@
  * @Description:
  * @Author: Sauron
  * @Date: 2023-05-10 16:33:52
- * @LastEditTime: 2023-05-23 10:09:54
+ * @LastEditTime: 2023-06-01 10:25:06
  * @LastEditors: Sauron
  */
 
 #ifndef INTERNEURON_LIB__INTERNEURON_MONITOR_HPP_
 #define INTERNEURON_LIB__INTERNEURON_MONITOR_HPP_
-#include "interneuron_msgs/msg/interneuron_header.hpp"
+//#include "interneuron_msgs/msg/interneuron_header.hpp"
 #include <vector>
 #include <string>
 #include "time_point.hpp"
@@ -16,11 +16,6 @@
 
 namespace interneuron
 {
-	enum class Advice
-	{
-		START,
-		END
-	};
 
 	class TimePointManager
 	{
@@ -46,10 +41,6 @@ namespace interneuron
 // we cannot use message_info directly, so it's rmw, rcl and rclcpp's job to provide needed information
 		INTERNEURON_PUBLIC
 		std::shared_ptr<TimePoint> get_timepoint(const std::string &topic_name, const std::string &node_name);
-
-// this function is provided for convenience and is thread-safe, it will use default parameters(x) and algorithm to update timepoint, you should use get_timepoint() and update_time() if you want to customize the update process
-		INTERNEURON_PUBLIC
-		bool default_update(const std::string &topic_name, const std::string &node_name);
 
 	private:
 		// Private constructor so that no objects can be created.

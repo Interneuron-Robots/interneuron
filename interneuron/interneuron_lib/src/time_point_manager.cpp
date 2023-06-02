@@ -2,7 +2,7 @@
  * @Description: 
  * @Author: Sauron
  * @Date: 2023-05-10 17:26:18
- * @LastEditTime: 2023-05-23 10:37:37
+ * @LastEditTime: 2023-06-01 10:24:41
  * @LastEditors: Sauron
  */
 #include "interneuron_lib/time_point_manager.hpp"
@@ -24,9 +24,9 @@ bool TimePointManager::add_timepoint(const std::string &topic_name, const std::s
     tp->lock();
     for (auto &sensor_name : sensor_names){
 	tp->reference_times_.insert(std::pair<std::string, uint64_t>(sensor_name, 0));
-	tp->remain_times_.insert(std::pair<std::string, uint64_t>(sensor_name, 0));
-	tp->wait_times_.insert(std::pair<std::string, uint64_t>(sensor_name, 0));
-	tp->last_sample_times_.insert(std::pair<std::string, uint64_t>(sensor_name, 0));
+	//tp->remain_times_.insert(std::pair<std::string, uint64_t>(sensor_name, 0));
+	//tp->wait_times_.insert(std::pair<std::string, uint64_t>(sensor_name, 0));
+	tp->last_sample_times_ = 0;
     }
     tp->unlock();
     //initialize the value using update_time() manually if needed. In most cases, the value will be updated automatically.
@@ -47,18 +47,4 @@ std::shared_ptr<TimePoint> TimePointManager::get_timepoint(const std::string &to
     }
 
     return tp->second;
-}
-
-bool TimePointManager::default_update(const std::string &topic_name, const std::string& node_name){
-    auto tp = this->get_timepoint(topic_name, node_name);
-    if (tp == nullptr){
-        std::cout << "the timepoint doesnt exist" << std::endl;
-        return false;
-    }
-    tp->lock();
-    //todo, should use the message_info to update the timepoint
-    //for each sensor, update related timestamp
-    //tp->update_time();
-    tp->unlock();
-    return true;
 }
