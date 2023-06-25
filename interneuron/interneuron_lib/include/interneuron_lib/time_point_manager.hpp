@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Sauron
  * @Date: 2023-05-10 16:33:52
- * @LastEditTime: 2023-06-01 10:25:06
+ * @LastEditTime: 2023-06-20 23:21:03
  * @LastEditors: Sauron
  */
 
@@ -36,11 +36,16 @@ namespace interneuron
 		TimePointManager &operator=(TimePointManager &&) = delete;	// Move assignment operator
 
 		INTERNEURON_PUBLIC
-		bool add_timepoint(const std::string &topic_name, const std::string &node_name, const std::vector<std::string> &sensor_names);
+		bool add_timepoint(const std::string &key, const std::vector<std::string> &sensor_names);
 		
 // we cannot use message_info directly, so it's rmw, rcl and rclcpp's job to provide needed information
 		INTERNEURON_PUBLIC
-		std::shared_ptr<TimePoint> get_timepoint(const std::string &topic_name, const std::string &node_name);
+		std::shared_ptr<TimePoint> get_timepoint(const std::string &key);
+
+		INTERNEURON_PUBLIC
+		bool update_remain_time(uint64_t new_time, uint8_t x);
+		INTERNEURON_PUBLIC
+		uint64_t get_remain_time();
 
 	private:
 		// Private constructor so that no objects can be created.
@@ -50,7 +55,10 @@ namespace interneuron
 		}
 std::mutex mtx_;
 // we use shared_ptr, so we dont need to worry about the memory management(this is for get_timepoint())
-		std::map<std::string, std::map<std::string, std::shared_ptr<TimePoint>>> time_points_; // topic_name + node_name -> timepoint
+		//std::map<std::string, std::map<std::string, std::shared_ptr<TimePoint>>> time_points_; // topic_name + node_name -> timepoint
+		std::map<std::string, std::shared_ptr<TimePoint>> time_points_;// key is different
+		uint64_t remain_time_reference_ = 0;//maybe a map if multiple path exists
+		uint64_t deadline_ = 0;//only used when all sensors trigger at the same time
 	};
 }
 #endif
