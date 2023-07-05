@@ -2,7 +2,7 @@
  * @Description: 
  * @Author: Sauron
  * @Date: 2023-05-10 17:26:18
- * @LastEditTime: 2023-06-20 23:21:00
+ * @LastEditTime: 2023-07-04 11:58:42
  * @LastEditors: Sauron
  */
 #include "interneuron_lib/time_point_manager.hpp"
@@ -30,26 +30,32 @@ bool TimePointManager::add_timepoint(const std::string &key, const std::vector<s
     return true;
 }
 
-void set_deadline(uint64_t deadline){
+void TimePointManager::set_deadline(uint64_t deadline){
     std::lock_guard<std::mutex> lock(this->mtx_);
     this->deadline_ = deadline;
 }
-todo: use deadline instead of remain_time, remain_time seems useless
+
+//todo: use deadline instead of remain_time, remain_time seems useless
 // return true if deadline miss happens
-bool TimePointManager::update_remain_time(uint64_t new_time, uint8_t x){
+bool TimePointManager::update_remain_time(uint64_t finish_time, uint8_t x){
     std::lock_guard<std::mutex> lock(this->mtx_);
+    if(this->deadline_ < finish_time){
+        std::cout << "deadline miss" << std::endl;
+        return true;
+    }
+    auto new_time = this->deadline_ - finish_time;
     if (this->remain_time_reference_ == 0){
         this->remain_time_reference_ = new_time;
         return true;
     }
     this->remain_time_reference_ = (this->remain_time_reference_ * (100 - x) + new_time * x) / 100;
-    return true;
+    return false;
 }
 
 uint64_t TimePointManager::get_remain_time(){
     std::lock_guard<std::mutex> lock(this->mtx_);
     return this->remain_time_reference_;
-}
+}//
 
 std::shared_ptr<TimePoint> TimePointManager::get_timepoint(const std::string &key){
     std::lock_guard<std::mutex> lock(this->mtx_);

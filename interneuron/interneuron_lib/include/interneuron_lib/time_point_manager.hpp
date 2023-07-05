@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Sauron
  * @Date: 2023-05-10 16:33:52
- * @LastEditTime: 2023-06-20 23:21:03
+ * @LastEditTime: 2023-07-04 11:50:49
  * @LastEditors: Sauron
  */
 
@@ -43,7 +43,9 @@ namespace interneuron
 		std::shared_ptr<TimePoint> get_timepoint(const std::string &key);
 
 		INTERNEURON_PUBLIC
-		bool update_remain_time(uint64_t new_time, uint8_t x);
+		void set_deadline(uint64_t deadline);
+		INTERNEURON_PUBLIC
+		bool update_remain_time(uint64_t finish_time, uint8_t x=30);
 		INTERNEURON_PUBLIC
 		uint64_t get_remain_time();
 

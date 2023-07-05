@@ -2,7 +2,7 @@
  * @Description: 
  * @Author: Sauron
  * @Date: 2023-05-18 14:58:53
- * @LastEditTime: 2023-06-19 19:30:54
+ * @LastEditTime: 2023-07-04 22:18:44
  * @LastEditors: Sauron
  */
 #ifndef INTERNEURON_LIB__TIME_POINT_HPP_
@@ -12,7 +12,7 @@
 #include <mutex>
 #include "visibility_control.hpp"
 #include <memory>
-#define INITIAL_COUNT_THRESHOLD 10
+#include <iostream>
 namespace interneuron
 {
 	/*
@@ -84,16 +84,21 @@ namespace interneuron
 			}
 			}
 		};*/
-		Policy update_reference_time(const std::string& sensor_name, uint64_t new_time, uint8_t x, uint64_t remain_time){
-			if(this->initial_count_<INITIAL_COUNT_THRESHOLD){
-				this->initial_count_++;
-				x = 50;//update quickly at first, maybe no need to do this
-			}
+		// remain time here may need to be replaced by a factor
+		Policy update_reference_time(const std::string& sensor_name, uint64_t new_time, uint64_t remain_time, uint8_t x=30){
 			auto it = this->reference_times_.find(sensor_name);
 			if (it == this->reference_times_.end()){
 				return Policy::Error;
 			}else{
+				if(this->initial_step_){
+					it->second = new_time;
+					this->initial_step_ = false;
+					return Policy::QualityFirst;
+				}
 				auto old_time = it->second;
+				#if CMAKE_BUILD_TYPE == DEBUG
+				std::cout<<"old time:"<<old_time<<", new time"<<new_time<<std::endl;
+				#endif
 				it->second = (old_time * (100 - x) + new_time * x) / 100;
 				if (old_time >= new_time){
 					return Policy::QualityFirst;
@@ -106,12 +111,12 @@ namespace interneuron
 				}
 			}
 		}
-		/*
+		
 		uint64_t update_last_sample_time(uint64_t new_time){
 			auto old_time = this->last_sample_time_;
 			this->last_sample_time_ = new_time;
 			return old_time;
-		}*/
+		}
 		void lock()
 		{
 			this->mtx_.lock();
@@ -125,11 +130,17 @@ namespace interneuron
 		// the key for these maps is the sensor's name
 		std::map<std::string, uint64_t> reference_times_;
 
+		//last_sample_time_ is only available when this time point is in the sensor/source node
+		uint64_t last_sample_time_ = 0;
+		//remain_time and deadline are only available when this time point is in the sink node
+		//uint64_t remain_time_ = 0;
+		//uint64_t deadline_ = 0;
+
 		// maybe we need to know who is next, then we can know the remain time(time waiting in the queue).
 		// for 1-n, we may need to change next_tp_ to a vector.
 		//std::next_tp_ = "";
 
-		int initial_count_ = 0;
+		bool initial_step_ = true;
 	};
 }
 #endif

@@ -54,8 +54,8 @@ public:
         // publisher_ = this->create_publisher<std_msgs::msg::String>(pub_topic, 1);
         publisher_ = this->create_publisher<test_msgs::msg::TestString>(pub_topic, 1);
 
-        if (period_ == 10000)
-            timer_ = this->create_wall_timer(10000ms, std::bind(&StartNode::timer_callback, this));
+        if (period_ == 1000)
+            timer_ = this->create_wall_timer(1000ms, std::bind(&StartNode::timer_callback, this));
         else
             timer_ = this->create_wall_timer(500ms, std::bind(&StartNode::timer_callback, this));
 
@@ -78,9 +78,6 @@ private:
     bool end_flag_;
     std::shared_ptr<trace::Trace> trace_callbacks_;
 
-    #ifdef INTERNEURON
-    uint64_t last_sample_time_ = 0;
-#endif
     void timer_callback()
     {
         std::string name = this->get_name();
@@ -109,20 +106,22 @@ private:
 #ifdef INTERNEURON
         auto message_info = std::make_unique<rclcpp::MessageInfo>(rclcpp::MessageInfo());
         message_info->this_sample_time_ = static_cast<uint64_t>(ctime.tv_sec * 1000000 + ctime.tv_usec);
-        message_info->last_sample_time_ = last_sample_time_ == 0 ? message_info->this_sample_time_ - period_ : last_sample_time_;
-        last_sample_time_ = message_info->this_sample_time_;
-        // message_info->get_rmw_message_info().source_timestamp = static_cast<int64_t>(ctime.tv_sec*1000000+ctime.tv_usec);
-        auto sample_time = message_info->this_sample_time_ - message_info->last_sample_time_;
 
         auto tp = interneuron::TimePointManager::getInstance().get_timepoint(publisher_->get_key_tp()+"sen");
-        interneuron::TimePointManager::getInstance().set_deadline(period_);
-        auto remain_time = interneuron::TimePointManager::getInstance().get_remain_time();
-        remain_time = remain_time != 0 ? remain_time : period_/2;
-        std::cout<<this->get_name()<<"'s sample reference time: "<<tp->reference_times_["c1_sensor"]<<", and sample time: "<<sample_time<<std::endl;
+        interneuron::TimePointManager::getInstance().set_deadline(2300000);
+        auto remain_time = interneuron::TimePointManager::getInstance().get_remain_time();// if different sensor has different deadlines, we cannot use a single remain_time
+        remain_time = remain_time != 0 ? remain_time : 100*1000;// for the first time, we set remain_time to be 100 ms
         std::cout<<"remain_time: "<<remain_time<<std::endl;
+        message_info->remain_time_ = remain_time;
+
         tp->lock();
-        auto policy = tp->update_reference_time("c1_sensor", sample_time, 30, remain_time); // remain_time should change according to previous pipeline's finish time and deadline
+        auto old_sample_time = tp->update_last_sample_time(message_info->this_sample_time_);
+        message_info->last_sample_time_ = old_sample_time == 0 ? message_info->this_sample_time_ - period_*1000 : old_sample_time;
+        auto sample_time = message_info->this_sample_time_ - message_info->last_sample_time_;
+        auto policy = tp->update_reference_time("c1_sensor", sample_time, remain_time); // remain_time should change according to previous pipeline's finish time and deadline
+        std::cout<<this->get_name()<<"'s sample reference time: "<<tp->reference_times_["c1_sensor"]<<", and sample time: "<<sample_time<<std::endl;
         tp->unlock();
+
         switch(policy){
             case interneuron::Policy::QualityFirst:
             std::cout<<"QualityFirst"<<std::endl;
@@ -159,7 +158,7 @@ public:
         subscription_ = this->create_subscription<test_msgs::msg::TestString>(sub_topic, 10, std::bind(&IntermediateNode::callback, this, _1, _2));
         interneuron::TimePointManager::getInstance().add_timepoint(subscription_->get_key_tp()+"sub", {"c1_sensor"});// for ros2
         interneuron::TimePointManager::getInstance().add_timepoint(subscription_->get_key_tp()+"app", {"c1_sensor"});
-        if(publisher_){
+        if(publisher_!=nullptr){
             interneuron::TimePointManager::getInstance().add_timepoint(publisher_->get_key_tp()+"pub", {"c1_sensor"});
         }
 #else
@@ -167,7 +166,7 @@ public:
 #endif
     }
 
-    rclcpp::Publisher<test_msgs::msg::TestString>::SharedPtr publisher_;
+    rclcpp::Publisher<test_msgs::msg::TestString>::SharedPtr publisher_ = nullptr;
     rclcpp::Subscription<test_msgs::msg::TestString>::SharedPtr subscription_;
 
 private:
@@ -187,7 +186,7 @@ private:
         auto tp = interneuron::TimePointManager::getInstance().get_timepoint(subscription_->get_key_tp()+"app");
         std::cout<<this->get_name()<<"'s receive reference time: "<<tp->reference_times_["c1_sensor"]<<", and receive time: "<<receive_time<<std::endl;
         tp->lock();
-        auto policy = tp->update_reference_time("c1_sensor",  receive_time, 30, msg_info.remain_time_); // we use the period as the remain_time
+        auto policy = tp->update_reference_time("c1_sensor",  receive_time, msg_info.remain_time_); // we use the period as the remain_time
         tp->unlock();
         switch(policy){
             case interneuron::Policy::QualityFirst:
@@ -226,11 +225,11 @@ private:
         gettimeofday(&ctime, NULL);
         auto pub_time = ctime.tv_sec * 1000000 + ctime.tv_usec;
         auto finish_time = pub_time - msg_info.last_sample_time_;
-        if (publisher_){
-        std::cout<<this->get_name()<<"'s finish reference time: "<<tp->reference_times_["c1_sensor"]<<", and finish time: "<<finish_time<<std::endl;
+        if (publisher_!=nullptr){
         tp = interneuron::TimePointManager::getInstance().get_timepoint(publisher_->get_key_tp()+"pub");
         tp->lock();
-        policy = tp->update_reference_time("c1_sensor",  finish_time, 30, msg_info.remain_time_); // we use the period as the remain_time
+        std::cout<<this->get_name()<<"'s finish reference time: "<<tp->reference_times_["c1_sensor"]<<", and finish time: "<<finish_time<<std::endl;
+        policy = tp->update_reference_time("c1_sensor",  finish_time, msg_info.remain_time_); 
         tp->unlock();
         switch(policy){
             case interneuron::Policy::QualityFirst:
@@ -249,13 +248,13 @@ private:
             std::cout<<"Unknown"<<std::endl;
         }
         auto message_info = std::make_unique<rclcpp::MessageInfo>(msg_info);
-        message_info->last_sample_time_ = msg_info.this_sample_time_;
             publisher_->publish(message, std::move(message_info));//no need to change msg_info
         }else{
-            if(interneuron::TimePointManager::getInstance().update_remain_time()){
-                std::cout<<"deadline missed"<<std::endl;
+            if(interneuron::TimePointManager::getInstance().update_remain_time(finish_time)){
+                std::cout<<"do something to handle the deadline miss"<<std::endl;
+            }else{
+                std::cout<<"finish within deadline, and the new remain_time is:"<<interneuron::TimePointManager::getInstance().get_remain_time()<<std::endl;
             }
-
         }
     }
 #else
@@ -324,9 +323,10 @@ int main(int argc, char *argv[])
     std::shared_ptr<trace::Trace> trace_callbacks = std::make_shared<trace::Trace>("data/trace.txt");
     trace_callbacks->trace_write("init", std::to_string(ctime.tv_sec * 1000 + ctime.tv_usec / 1000));
 
-    // Create callbacks
-    auto c1_t_cb = std::make_shared<StartNode>("Timer_callback", "c1", trace_callbacks, 1000, 1000, false);
-    auto c1_r_cb_1 = std::make_shared<IntermediateNode>("Regular_callback1", "c1", "c2", trace_callbacks, 1000, true);
+    // Create callbacks, exec_time and period are in ms
+    auto c1_t_cb = std::make_shared<StartNode>("Timer_callback", "c1", trace_callbacks, 300, 1000, false);
+    auto c1_r_cb_1 = std::make_shared<IntermediateNode>("Regular_callback1", "c1", "c2", trace_callbacks, 400, true);
+    auto c1_r_cb_2 = std::make_shared<IntermediateNode>("Regular_callback2", "c2", "", trace_callbacks, 500, true);
 
     // auto c1_r_cb_2 = std::make_shared<IntermediateNode>("Regular_callback2", "c1", "", trace_callbacks, 1000, true);
     // auto c1_r_cb_3 = std::make_shared<IntermediateNode>("Regular_callback3", "c1", "", trace_callbacks, 1000, true);
@@ -335,7 +335,7 @@ int main(int argc, char *argv[])
     // auto c1_r_cb_3 = std::make_shared<IntermediateNode>("Regular_callback3", "c3", "c4", trace_callbacks, 1000, true);
 
     // Create executors
-    rclcpp::executors::SingleThreadedExecutor exec1;
+    rclcpp::executors::MultiThreadedExecutor exec1;
 
 #ifdef PICAS
     // Enable priority-based callback scheduling
@@ -350,7 +350,7 @@ int main(int argc, char *argv[])
     // Allocate callbacks to executors
     exec1.add_node(c1_t_cb);
     exec1.add_node(c1_r_cb_1);
-    // exec1.add_node(c1_r_cb_2);
+    exec1.add_node(c1_r_cb_2);
     // exec1.add_node(c1_r_cb_3);
 
 #ifdef PICAS
@@ -366,7 +366,7 @@ int main(int argc, char *argv[])
 
     std::thread spinThread1(&rclcpp::executors::SingleThreadedExecutor::spin_rt, &exec1);
 #else
-    std::thread spinThread1(&rclcpp::executors::SingleThreadedExecutor::spin, &exec1);
+    std::thread spinThread1(&rclcpp::executors::MultiThreadedExecutor::spin, &exec1);
 #endif
 
     spinThread1.join();
