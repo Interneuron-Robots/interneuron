@@ -12,7 +12,7 @@ endif()
 include_directories(include)
 
 if(${INTERNEURON})
-  add_compile_options(-DINTERNEURON)
+  add_compile_options(-DINTERNEURON -fPIC)
 endif()
 
 find_package(ament_cmake REQUIRED)

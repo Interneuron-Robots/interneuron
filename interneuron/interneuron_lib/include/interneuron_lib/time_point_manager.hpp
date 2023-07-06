@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Sauron
  * @Date: 2023-05-10 16:33:52
- * @LastEditTime: 2023-07-04 11:50:49
+ * @LastEditTime: 2023-07-05 18:17:33
  * @LastEditors: Sauron
  */
 
@@ -37,17 +37,20 @@ namespace interneuron
 
 		INTERNEURON_PUBLIC
 		bool add_timepoint(const std::string &key, const std::vector<std::string> &sensor_names);
-		
+
 // we cannot use message_info directly, so it's rmw, rcl and rclcpp's job to provide needed information
 		INTERNEURON_PUBLIC
 		std::shared_ptr<TimePoint> get_timepoint(const std::string &key);
 
+		// init_set should be invoked for all the sensors during the initialization
+		// remain_time could be 0
 		INTERNEURON_PUBLIC
-		void set_deadline(uint64_t deadline);
+		void init_set(std::string sensor_name, uint64_t deadline, uint64_t remain_time = 0);
+
 		INTERNEURON_PUBLIC
-		bool update_remain_time(uint64_t finish_time, uint8_t x=30);
+		bool update_remain_time(std::string sensor_name, uint64_t finish_time, uint8_t x=30);
 		INTERNEURON_PUBLIC
-		uint64_t get_remain_time();
+		uint64_t get_remain_time(std::string sensor_name);
 
 	private:
 		// Private constructor so that no objects can be created.
@@ -58,9 +61,11 @@ namespace interneuron
 std::mutex mtx_;
 // we use shared_ptr, so we dont need to worry about the memory management(this is for get_timepoint())
 		//std::map<std::string, std::map<std::string, std::shared_ptr<TimePoint>>> time_points_; // topic_name + node_name -> timepoint
-		std::map<std::string, std::shared_ptr<TimePoint>> time_points_;// key is different
-		uint64_t remain_time_reference_ = 0;//maybe a map if multiple path exists
-		uint64_t deadline_ = 0;//only used when all sensors trigger at the same time
+		std::map<std::string, std::shared_ptr<TimePoint>> time_points_;// key is the sub/pub_id + a string
+
+		//the following maps are used to store the information for all the chains
+		std::map<std::string, uint64_t> remain_times_;//key is the sensor name
+		std::map<std::string, uint64_t> deadlines_;//key is the sensor name
 	};
 }
 #endif

@@ -2,7 +2,7 @@
  * @Description: 
  * @Author: Sauron
  * @Date: 2023-05-18 14:58:53
- * @LastEditTime: 2023-07-04 22:18:44
+ * @LastEditTime: 2023-07-05 18:21:38
  * @LastEditors: Sauron
  */
 #ifndef INTERNEURON_LIB__TIME_POINT_HPP_
@@ -97,7 +97,7 @@ namespace interneuron
 				}
 				auto old_time = it->second;
 				#if CMAKE_BUILD_TYPE == DEBUG
-				std::cout<<"old time:"<<old_time<<", new time"<<new_time<<std::endl;
+				std::cout<<"old time:"<<old_time<<", new time:"<<new_time<<std::endl;
 				#endif
 				it->second = (old_time * (100 - x) + new_time * x) / 100;
 				if (old_time >= new_time){
