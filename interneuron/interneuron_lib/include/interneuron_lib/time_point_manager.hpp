@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Sauron
  * @Date: 2023-05-10 16:33:52
- * @LastEditTime: 2023-07-05 18:17:33
+ * @LastEditTime: 2023-07-09 17:14:34
  * @LastEditors: Sauron
  */
 
@@ -36,16 +36,16 @@ namespace interneuron
 		TimePointManager &operator=(TimePointManager &&) = delete;	// Move assignment operator
 
 		INTERNEURON_PUBLIC
-		bool add_timepoint(const std::string &key, const std::vector<std::string> &sensor_names);
+		std::shared_ptr<TimePoint> add_timepoint(const std::string &key, const std::vector<std::string> &sensor_names);
 
 // we cannot use message_info directly, so it's rmw, rcl and rclcpp's job to provide needed information
 		INTERNEURON_PUBLIC
 		std::shared_ptr<TimePoint> get_timepoint(const std::string &key);
 
-		// init_set should be invoked for all the sensors during the initialization
-		// remain_time could be 0
+		// init_source should be invoked for all the sensors during the initialization
+		// key should be the sensor's publisher's ID+'sen', remain_time could be 0
 		INTERNEURON_PUBLIC
-		void init_set(std::string sensor_name, uint64_t deadline, uint64_t remain_time = 0);
+		void init_source(std::string&sensor_name, uint64_t deadline, uint64_t remain_time = 0);
 
 		INTERNEURON_PUBLIC
 		bool update_remain_time(std::string sensor_name, uint64_t finish_time, uint8_t x=30);

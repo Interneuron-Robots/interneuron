@@ -2,20 +2,22 @@
  * @Description: 
  * @Author: Sauron
  * @Date: 2023-05-10 17:26:18
- * @LastEditTime: 2023-07-05 21:47:42
+ * @LastEditTime: 2023-07-09 17:14:27
  * @LastEditors: Sauron
  */
 #include "interneuron_lib/time_point_manager.hpp"
 #include <iostream>
+#include <cassert>
 using namespace interneuron;
 
-bool TimePointManager::add_timepoint(const std::string &key, const std::vector<std::string> &sensor_names){
+shared_ptr<TimePoint> TimePointManager::add_timepoint(const std::string &key, const std::vector<std::string> &sensor_names){
 	    std::lock_guard<std::mutex> lock(this->mtx_);
     if (this->time_points_.find(key) == this->time_points_.end()){
         this->time_points_[key]= std::make_shared<TimePoint>();
     }else{
-        std::cout << "[Error][TimePointManager::add_timepoint] key:"<<key<<" already exists" << std::endl;
-        return false;
+        assert(false);
+        //std::cout << "[Error][TimePointManager::add_timepoint] key:"<<key<<" already exists" << std::endl;
+        return nullptr;
     } 
     auto tp = this->time_points_[key];
     tp->lock();
@@ -27,10 +29,10 @@ bool TimePointManager::add_timepoint(const std::string &key, const std::vector<s
     }
     tp->unlock();
     //initialize the value using update_time() manually if needed. In most cases, the value will be updated automatically.
-    return true;
+    return tp;
 }
 
-void TimePointManager::init_set(std::string sensor_name, uint64_t deadline, uint64_t remain_time){
+void TimePointManager::init_source(std::string sensor_name, uint64_t deadline, uint64_t remain_time){
     std::lock_guard<std::mutex> lock(this->mtx_);
     deadlines_[sensor_name] = deadline;
     remain_times_[sensor_name] = remain_time;
@@ -43,11 +45,12 @@ bool TimePointManager::update_remain_time(std::string sensor_name, uint64_t fini
     auto it = this->deadlines_.find(sensor_name);
     auto it2 = this->remain_times_.find(sensor_name);
     if (it == this->deadlines_.end() || it2 == this->remain_times_.end()){
-        std::cout << "[Error][TimePointManager::update_remain_time] sensor_name:"<<sensor_name<<" not found" << std::endl;
+        assert(false);
+        //std::cout << "[Error][TimePointManager::update_remain_time] sensor_name:"<<sensor_name<<" not found" << std::endl;
         return false;//no deadline, so no deadline miss
     }
     if(it->second < finish_time){
-        #if CMAKE_BUILD_TYPE == DEBUG
+        #ifdef PRINT_DEBUG
         std::cout << "deadline miss" << std::endl;
         #endif
         return true;
@@ -65,7 +68,8 @@ uint64_t TimePointManager::get_remain_time(std::string sensor_name){
     std::lock_guard<std::mutex> lock(this->mtx_);
     auto it = this->remain_times_.find(sensor_name);
     if (it == this->remain_times_.end()){
-        std::cout << "[Error][TimePointManager::get_remain_time] sensor_name:"<<sensor_name<<" not found" << std::endl;
+        assert(false);
+        //std::cout << "[Error][TimePointManager::get_remain_time] sensor_name:"<<sensor_name<<" not found" << std::endl;
         return 0;
     }
     return it->second;
@@ -75,8 +79,8 @@ std::shared_ptr<TimePoint> TimePointManager::get_timepoint(const std::string &ke
     std::lock_guard<std::mutex> lock(this->mtx_);
     auto tp = this->time_points_.find(key);
     if (tp == this->time_points_.end()){
-    std::cout << "timepoint not found" << std::endl;
-    return nullptr;
+        assert(false);
+        return nullptr;
     }
     return tp->second;
 }
