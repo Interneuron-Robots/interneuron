@@ -2,7 +2,7 @@
  * @Description: 
  * @Author: Sauron
  * @Date: 2023-05-18 14:58:53
- * @LastEditTime: 2023-07-09 22:22:29
+ * @LastEditTime: 2023-07-11 10:38:25
  * @LastEditors: Sauron
  */
 #ifndef INTERNEURON_LIB__TIME_POINT_HPP_
@@ -26,6 +26,12 @@ namespace interneuron
 		Emergency,
 		Error,//usually assert
 	};
+	enum class TimePointType
+	{
+		Source,
+		Middle,
+		Sink,
+	};
 
 	INTERNEURON_PUBLIC
 	struct TP_Info
@@ -33,6 +39,7 @@ namespace interneuron
 		uint64_t this_sample_time_;
 		uint64_t last_sample_time_;
 		uint64_t remain_time_; // with the reference time in timepoint and remain_time in message_info, you can know the deadline
+		TP_Info() : this_sample_time_(0), last_sample_time_(0), remain_time_(0) {}
 		TP_Info(uint64_t this_sample_time, uint64_t last_sample_time, uint64_t remain_time) : this_sample_time_(this_sample_time), last_sample_time_(last_sample_time), remain_time_(remain_time) {}
 	};
 

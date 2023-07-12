@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Sauron
  * @Date: 2023-05-10 16:33:52
- * @LastEditTime: 2023-07-09 17:14:34
+ * @LastEditTime: 2023-07-11 22:18:59
  * @LastEditors: Sauron
  */
 
@@ -12,6 +12,9 @@
 #include <vector>
 #include <string>
 #include "time_point.hpp"
+#include "source_time_point.hpp"
+#include "middle_time_point.hpp"
+#include "sink_time_point.hpp"
 #include "visibility_control.hpp"
 
 namespace interneuron
@@ -36,21 +39,16 @@ namespace interneuron
 		TimePointManager &operator=(TimePointManager &&) = delete;	// Move assignment operator
 
 		INTERNEURON_PUBLIC
-		std::shared_ptr<TimePoint> add_timepoint(const std::string &key, const std::vector<std::string> &sensor_names);
-
+		std::shared_ptr<SourceTimePoint> add_source_timepoint(const std::string &sensor_name, uint64_t deadline, uint64_t period);
+		INTERNEURON_PUBLIC
+		std::shared_ptr<MiddleTimePoint> add_middle_timepoint(const std::string &key, const std::vector<std::string> &sensor_names);
+		INTERNEURON_PUBLIC
+		std::shared_ptr<SinkTimePoint> add_sink_timepoint(const std::string &key, const std::vector<std::string> &sensor_names);
+		
 // we cannot use message_info directly, so it's rmw, rcl and rclcpp's job to provide needed information
 		INTERNEURON_PUBLIC
-		std::shared_ptr<TimePoint> get_timepoint(const std::string &key);
+		std::shared_ptr<TimePoint> get_timepoint(const std::string &key, TimePointType type);
 
-		// init_source should be invoked for all the sensors during the initialization
-		// key should be the sensor's publisher's ID+'sen', remain_time could be 0
-		INTERNEURON_PUBLIC
-		void init_source(std::string&sensor_name, uint64_t deadline, uint64_t remain_time = 0);
-
-		INTERNEURON_PUBLIC
-		bool update_remain_time(std::string sensor_name, uint64_t finish_time, uint8_t x=30);
-		INTERNEURON_PUBLIC
-		uint64_t get_remain_time(std::string sensor_name);
 
 	private:
 		// Private constructor so that no objects can be created.
@@ -58,14 +56,13 @@ namespace interneuron
 		{
 			// Initialization of the singleton, if needed
 		}
-std::mutex mtx_;
-// we use shared_ptr, so we dont need to worry about the memory management(this is for get_timepoint())
-		//std::map<std::string, std::map<std::string, std::shared_ptr<TimePoint>>> time_points_; // topic_name + node_name -> timepoint
-		std::map<std::string, std::shared_ptr<TimePoint>> time_points_;// key is the sub/pub_id + a string
+		std::mutex source_mtx_;
+		std::mutex middle_mtx_;
+		std::mutex sink_mtx_;
+		std::map<std::string, std::shared_ptr<SourceTimePoint>> source_time_points_;// key is the sub/pub_id + "source"
+		std::map<std::string, std::shared_ptr<MiddleTimePoint>> middle_time_points_;// key is the sub/pub_id + "middle"
+		std::map<std::string, std::shared_ptr<SinkTimePoint>> sink_time_points_;// key is the sub/pub_id + "sink"
 
-		//the following maps are used to store the information for all the chains
-		std::map<std::string, uint64_t> remain_times_;//key is the sensor name
-		std::map<std::string, uint64_t> deadlines_;//key is the sensor name
 	};
 }
 #endif

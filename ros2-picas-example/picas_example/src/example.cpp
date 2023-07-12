@@ -63,8 +63,7 @@ public:
         RCLCPP_INFO(this->get_logger(), "Create wall timer at %ld", create_timer.tv_sec * 1000 + create_timer.tv_usec / 1000);
 #ifdef INTERNEURON
         // StartNode only has one timepoint for publisher
-        interneuron::TimePointManager::getInstance().add_timepoint(publisher_->get_key_tp()+"sen", {"c1_sensor"});
-        interneuron::TimePointManager::getInstance().init_set("c1_sensor",2100000);
+        source_tp_ = interneuron::TimePointManager::getInstance().add_source_timepoint("c1_sensor",period_*1000000,period_*1000000);
 #endif
     }
 
@@ -78,6 +77,10 @@ private:
     timeval ctime, ftime, create_timer, latency_time;
     bool end_flag_;
     std::shared_ptr<trace::Trace> trace_callbacks_;
+
+    #ifdef INTERNEURON
+    shared_ptr<interneuron::SourceTimePoint> source_tp_;
+    #endif
 
     void timer_callback()
     {
@@ -106,37 +109,7 @@ private:
 
 #ifdef INTERNEURON
         auto message_info = std::make_unique<rclcpp::MessageInfo>(rclcpp::MessageInfo());
-        auto this_sample_time = static_cast<uint64_t>(ctime.tv_sec * 1000000 + ctime.tv_usec);
-
-        auto tp = interneuron::TimePointManager::getInstance().get_timepoint(publisher_->get_key_tp()+"sen");
-        auto remain_time = interneuron::TimePointManager::getInstance().get_remain_time("c1_sensor");// if different sensor has different deadlines, we cannot use a single remain_time
-        remain_time = remain_time != 0 ? remain_time : 100*1000;// for the first time, we set remain_time to be 100 ms
-        std::cout<<"remain_time: "<<remain_time<<std::endl;
-
-        tp->lock();
-        auto old_sample_time = tp->update_last_sample_time(this_sample_time);
-        message_info->set_tp_info("c1_sensor",this_sample_time, old_sample_time == 0 ? this_sample_time - period_*1000 : old_sample_time, remain_time);
-        auto sample_time = this_sample_time - message_info->get_last_sample_time("c1_sensor");
-        auto policy = tp->update_reference_time("c1_sensor", sample_time, remain_time); // remain_time should change according to previous pipeline's finish time and deadline
-        std::cout<<this->get_name()<<"'s sample reference time: "<<tp->reference_times_["c1_sensor"]<<", and sample time: "<<sample_time<<std::endl;
-        tp->unlock();
-
-        switch(policy){
-            case interneuron::Policy::QualityFirst:
-            std::cout<<"QualityFirst"<<std::endl;
-            break;
-            case interneuron::Policy::SpeedFirst:
-            std::cout<<"SpeedFirst"<<std::endl;
-            break;
-            case interneuron::Policy::Emergency:
-            std::cout<<"Emergency"<<std::endl;
-            break;
-            case interneuron::Policy::Error:
-            std::cout<<"Error"<<std::endl;
-            break;
-            default:
-            std::cout<<"Unknown"<<std::endl;
-        }
+        std::cout<<"[SourcePoint]:"<<source_time_point_->update_sample_time(message_info->get_TP_Info("c1_sensor"))<<std::endl;
         publisher_->publish(message, std::move(message_info));
 #else
         publisher_->publish(message);
@@ -155,10 +128,12 @@ public:
         }
 #ifdef INTERNEURON
         subscription_ = this->create_subscription<test_msgs::msg::TestString>(sub_topic, 10, std::bind(&IntermediateNode::callback, this, _1, _2));
-        interneuron::TimePointManager::getInstance().add_timepoint(subscription_->get_key_tp()+"sub", {"c1_sensor"});// for ros2
-        interneuron::TimePointManager::getInstance().add_timepoint(subscription_->get_key_tp()+"app", {"c1_sensor"});
+        interneuron::TimePointManager::getInstance().add_middle_timepoint(subscription_->get_key_tp()+"sub", {"c1_sensor"});// for ros2
+        start_tp_ = interneuron::TimePointManager::getInstance().add_middle_timepoint(subscription_->get_key_tp()+"app", {"c1_sensor"});
         if(publisher_!=nullptr){
-            interneuron::TimePointManager::getInstance().add_timepoint(publisher_->get_key_tp()+"pub", {"c1_sensor"});
+            end_tp_ = interneuron::TimePointManager::getInstance().add_middle_timepoint(publisher_->get_key_tp()+"pub", {"c1_sensor"});
+        }else{
+            sink_tp_ = interneuron::TimePointManager::getInstance().add_sink_timepoint("sink", {"c1_sensor"});
         }
 #else
         subscription_ = this->create_subscription<test_msgs::msg::TestString>(sub_topic, 1, std::bind(&IntermediateNode::callback, this, _1));
@@ -176,18 +151,14 @@ private:
     std::shared_ptr<trace::Trace> trace_callbacks_;
     bool end_flag_;
 #ifdef INTERNEURON
+    shared_ptr<interneuron::MiddleTimePoint> start_tp_;
+    shared_ptr<interneuron::MiddleTimePoint> end_tp_;
+    shared_ptr<interneuron::SinkTimePoint> sink_tp_;
     void callback(const test_msgs::msg::TestString::SharedPtr msg, const rclcpp::MessageInfo& msg_info)
     {
-        gettimeofday(&ctime, NULL);
-        // interneuron::TimePointManager::getInstance().default_update("c1", "Regular_callback1");
-        auto run_start = ctime.tv_sec * 1000000 + ctime.tv_usec;
-        auto receive_time = run_start - msg_info.get_last_sample_time("c1_sensor");
-        auto tp = interneuron::TimePointManager::getInstance().get_timepoint(subscription_->get_key_tp()+"app");
-        std::cout<<this->get_name()<<"'s receive reference time: "<<tp->reference_times_["c1_sensor"]<<", and receive time: "<<receive_time<<std::endl;
-        tp->lock();
-        auto policy = tp->update_reference_time("c1_sensor",  receive_time, msg_info.get_remain_time("c1_sensor")); // we use the period as the remain_time
-        tp->unlock();
-        switch(policy){
+        //---update start tp
+        auto run_policy = start_tp_->update_reference_times(msg_info.tp_infos_);
+        switch(run_policy){
             case interneuron::Policy::QualityFirst:
             std::cout<<"QualityFirst"<<std::endl;
             break;
@@ -203,6 +174,8 @@ private:
             default:
             std::cout<<"Unknown"<<std::endl;
         }
+        //---
+
         std::string name = this->get_name();
         RCLCPP_INFO(this->get_logger(), ("callback: " + name).c_str());
         // gettimeofday(&ctime, NULL);
@@ -220,36 +193,12 @@ private:
             latency_time.tv_usec = (ftime.tv_usec - msg->stamp.usec);
             trace_callbacks_->trace_write_count(name + "_latency", std::to_string(latency_time.tv_sec * 1000000 + latency_time.tv_usec), message.data);
         }
-
-        gettimeofday(&ctime, NULL);
-        auto pub_time = ctime.tv_sec * 1000000 + ctime.tv_usec;
-        auto finish_time = pub_time - msg_info.get_last_sample_time("c1_sensor");
-        if (publisher_!=nullptr){
-        tp = interneuron::TimePointManager::getInstance().get_timepoint(publisher_->get_key_tp()+"pub");
-        tp->lock();
-        std::cout<<this->get_name()<<"'s finish reference time: "<<tp->reference_times_["c1_sensor"]<<", and finish time: "<<finish_time<<std::endl;
-        policy = tp->update_reference_time("c1_sensor",  finish_time, msg_info.get_remain_time("c1_sensor")); 
-        tp->unlock();
-        switch(policy){
-            case interneuron::Policy::QualityFirst:
-            std::cout<<"QualityFirst"<<std::endl;
-            break;
-            case interneuron::Policy::SpeedFirst:
-            std::cout<<"SpeedFirst"<<std::endl;
-            break;
-            case interneuron::Policy::Emergency:
-            std::cout<<"Emergency"<<std::endl;
-            break;
-            case interneuron::Policy::Error:
-            std::cout<<"Error"<<std::endl;
-            break;
-            default:
-            std::cout<<"Unknown"<<std::endl;
-        }
-        auto message_info = std::make_unique<rclcpp::MessageInfo>(msg_info);
+        if(publisher_!=nullptr){
+            auto message_info = std::make_unique<rclcpp::MessageInfo>(msg_info);
+            end_tp_->update_reference_times(message_info->tp_infos_);
             publisher_->publish(message, std::move(message_info));//no need to change msg_info
         }else{
-            if(interneuron::TimePointManager::getInstance().update_remain_time("c1_sensor",finish_time)){
+            sink_tp_->update_finish_times(msg_info.tp_infos_);
                 std::cout<<"do something to handle the deadline miss"<<std::endl;
             }else{
                 std::cout<<"finish within deadline, and the new remain_time is:"<<interneuron::TimePointManager::getInstance().get_remain_time("c1_sensor")<<std::endl;
