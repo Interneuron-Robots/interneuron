@@ -2,7 +2,7 @@
  * @Description: 
  * @Author: Sauron
  * @Date: 2023-07-09 21:42:08
- * @LastEditTime: 2023-07-11 22:20:45
+ * @LastEditTime: 2023-07-12 17:00:07
  * @LastEditors: Sauron
  */
 #ifndef INTERNEURON_LIB__MIDDLE_TIME_POINT_HPP_
@@ -26,14 +26,25 @@ namespace interneuron
 			for(auto it = tp_infos.begin(); it != tp_infos.end(); it++){
 				auto new_policy = update_reference_time(it->first, now_time, it->second, update_ratio, qos_ratio);
 				if(new_policy == Policy::Error){
-					#ifdef PRINT_DEBUG
 					std::cout<<"Error in update_reference_times"<<std::endl;
-					#endif
 					assert(false);
-					return Policy::Error;
 				}
 				#ifdef PRINT_DEBUG
-				std::cout<<"sensor:"<<it->first<<" updated policy:"<<new_policy<<std::endl;
+				std::cout<<"[Middle]sensor:"<<it->first<<" policy:";
+				switch(new_policy){
+					case Policy::QualityFirst:
+						std::cout<<"QualityFirst"<<std::endl;
+						break;
+					case Policy::SpeedFirst:
+						std::cout<<"SpeedFirst"<<std::endl;
+						break;
+					case Policy::Emergency:
+						std::cout<<"Emergency"<<std::endl;
+						break;
+					default:
+						std::cout<<"Error"<<std::endl;
+						break;
+				}
 				#endif
 				if(new_policy > policy){
 					policy = new_policy;
@@ -62,7 +73,7 @@ namespace interneuron
 				
 				it->second = (old_time * (100 - update_ratio) + new_time * update_ratio)/100;
 				#ifdef PRINT_DEBUG
-				std::cout<<"old time:"<<old_time<<", new time:"<<new_time<<" updated time:"<<it->second<<std::endl;
+				std::cout<<"[Middle]old reference time:"<<old_time<<", new reference time:"<<new_time<<" updated:"<<it->second<<std::endl;
 				#endif
 				if (old_time >= new_time){
 					return Policy::QualityFirst;

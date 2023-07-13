@@ -2,7 +2,7 @@
  * @Description: 
  * @Author: Sauron
  * @Date: 2023-07-10 11:14:13
- * @LastEditTime: 2023-07-11 23:23:56
+ * @LastEditTime: 2023-07-12 16:50:59
  * @LastEditors: Sauron
  */
 #ifndef INTERNEURON_LIB__SINK_TIME_POINT_HPP_
@@ -15,7 +15,7 @@ class SinkTimePoint : public TimePoint
 {
 	public:
 	SinkTimePoint(const std::vector<std::string>&sensor_names, const std::vector<std::shared_ptr<SourceTimePoint>>&source_time_points){
-		for(int i = 0; i < sensor_names.size(); i++){
+		for(long unsigned int i = 0; i < sensor_names.size(); i++){
 			finish_times_.insert(std::pair<std::string, uint64_t>(sensor_names[i], 0));
 			source_time_points_.insert(std::pair<std::string, std::shared_ptr<SourceTimePoint>>(sensor_names[i], source_time_points[i]));
 		}
@@ -37,8 +37,10 @@ class SinkTimePoint : public TimePoint
 			auto source_tp = source_time_points_[sensor_name];
 			//check whether a deadline miss happens
 			auto deadline = source_tp->get_deadline();
+			
 			if(new_time > deadline){
 				#ifdef PRINT_DEBUG
+				std::cout<<"[Sink]sensor:"<<sensor_name<<"'s pipeline costs:"<<new_time<<" reference time is:"<<it->second<<std::endl;
 				std::cout<<"deadline miss happens"<<std::endl;
 				#endif
 				//do something
@@ -51,12 +53,13 @@ class SinkTimePoint : public TimePoint
 			if(it->second == 0){
 				it->second = new_time;
 				source_tp->set_remain_time(deadline - new_time);
+				return;
 			}
 			auto old_time = it->second;
 			it->second = (old_time * (100 - update_ratio) + new_time * update_ratio)/100;
 			//may need to change the remain time of source time point
 			#ifdef PRINT_DEBUG
-			std::cout<<"old time:"<<old_time<<", new time:"<<new_time<<" updated time:"<<it->second<<std::endl;
+			std::cout<<"[Sink]sensor:"<<sensor_name<<"'s pipeline costs:"<<new_time<<" reference time is:"<<old_time<<" updated:"<<it->second<<std::endl;
 			#endif
 			}
 	}

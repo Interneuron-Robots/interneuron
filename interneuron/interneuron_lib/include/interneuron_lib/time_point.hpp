@@ -2,7 +2,7 @@
  * @Description: 
  * @Author: Sauron
  * @Date: 2023-05-18 14:58:53
- * @LastEditTime: 2023-07-11 10:38:25
+ * @LastEditTime: 2023-07-12 16:06:41
  * @LastEditors: Sauron
  */
 #ifndef INTERNEURON_LIB__TIME_POINT_HPP_
@@ -19,6 +19,7 @@
 namespace interneuron
 {
 	//the order shouldn't be changed
+	INTERNEURON_PUBLIC
 	enum class Policy
 	{
 		QualityFirst,
@@ -26,6 +27,7 @@ namespace interneuron
 		Emergency,
 		Error,//usually assert
 	};
+	INTERNEURON_PUBLIC
 	enum class TimePointType
 	{
 		Source,
@@ -41,6 +43,9 @@ namespace interneuron
 		uint64_t remain_time_; // with the reference time in timepoint and remain_time in message_info, you can know the deadline
 		TP_Info() : this_sample_time_(0), last_sample_time_(0), remain_time_(0) {}
 		TP_Info(uint64_t this_sample_time, uint64_t last_sample_time, uint64_t remain_time) : this_sample_time_(this_sample_time), last_sample_time_(last_sample_time), remain_time_(remain_time) {}
+		std::string print(){
+			return "this_sample_time:"+std::to_string(this_sample_time_)+", last_sample_time:"+std::to_string(last_sample_time_)+", remain_time:"+std::to_string(remain_time_);
+		}
 	};
 
 	INTERNEURON_PUBLIC

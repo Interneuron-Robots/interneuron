@@ -17,6 +17,9 @@ endif()
 if(${INTERNEURON})
   add_compile_options(-DINTERNEURON)
 endif()
+if(${PRINT_DEBUG})
+  add_compile_options(-DPRINT_DEBUG)
+endif()
 
 #set(FASTDDS_LOG_INCLUDE_DIR "/home/sauron/ros2-interneuron/install/fastrtps/include/fastrtps/fastrtps/log")
 # find dependencies

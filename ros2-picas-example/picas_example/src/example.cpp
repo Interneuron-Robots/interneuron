@@ -63,7 +63,7 @@ public:
         RCLCPP_INFO(this->get_logger(), "Create wall timer at %ld", create_timer.tv_sec * 1000 + create_timer.tv_usec / 1000);
 #ifdef INTERNEURON
         // StartNode only has one timepoint for publisher
-        source_tp_ = interneuron::TimePointManager::getInstance().add_source_timepoint("c1_sensor",period_*1000000,period_*1000000);
+        source_tp_ = interneuron::TimePointManager::getInstance().add_source_timepoint("c1_sensor",period_*2000000,period_*1000000);
 #endif
     }
 
@@ -79,7 +79,7 @@ private:
     std::shared_ptr<trace::Trace> trace_callbacks_;
 
     #ifdef INTERNEURON
-    shared_ptr<interneuron::SourceTimePoint> source_tp_;
+    std::shared_ptr<interneuron::SourceTimePoint> source_tp_;
     #endif
 
     void timer_callback()
@@ -108,8 +108,8 @@ private:
         }
 
 #ifdef INTERNEURON
-        auto message_info = std::make_unique<rclcpp::MessageInfo>(rclcpp::MessageInfo());
-        std::cout<<"[SourcePoint]:"<<source_time_point_->update_sample_time(message_info->get_TP_Info("c1_sensor"))<<std::endl;
+        auto message_info = std::make_unique<rclcpp::MessageInfo>(rclcpp::MessageInfo({"c1_sensor"}));
+        auto policy = source_tp_->update_sample_time(message_info->get_TP_Info("c1_sensor"));
         publisher_->publish(message, std::move(message_info));
 #else
         publisher_->publish(message);
@@ -151,29 +151,14 @@ private:
     std::shared_ptr<trace::Trace> trace_callbacks_;
     bool end_flag_;
 #ifdef INTERNEURON
-    shared_ptr<interneuron::MiddleTimePoint> start_tp_;
-    shared_ptr<interneuron::MiddleTimePoint> end_tp_;
-    shared_ptr<interneuron::SinkTimePoint> sink_tp_;
+    std::shared_ptr<interneuron::MiddleTimePoint> start_tp_;
+    std::shared_ptr<interneuron::MiddleTimePoint> end_tp_;
+    std::shared_ptr<interneuron::SinkTimePoint> sink_tp_;
     void callback(const test_msgs::msg::TestString::SharedPtr msg, const rclcpp::MessageInfo& msg_info)
     {
+        auto message_info = std::make_unique<rclcpp::MessageInfo>(msg_info);
         //---update start tp
-        auto run_policy = start_tp_->update_reference_times(msg_info.tp_infos_);
-        switch(run_policy){
-            case interneuron::Policy::QualityFirst:
-            std::cout<<"QualityFirst"<<std::endl;
-            break;
-            case interneuron::Policy::SpeedFirst:
-            std::cout<<"SpeedFirst"<<std::endl;
-            break;
-            case interneuron::Policy::Emergency:
-            std::cout<<"Emergency"<<std::endl;
-            break;
-            case interneuron::Policy::Error:
-            std::cout<<"Error"<<std::endl;
-            break;
-            default:
-            std::cout<<"Unknown"<<std::endl;
-        }
+        auto run_policy = start_tp_->update_reference_times(message_info->tp_infos_);
         //---
 
         std::string name = this->get_name();
@@ -194,15 +179,10 @@ private:
             trace_callbacks_->trace_write_count(name + "_latency", std::to_string(latency_time.tv_sec * 1000000 + latency_time.tv_usec), message.data);
         }
         if(publisher_!=nullptr){
-            auto message_info = std::make_unique<rclcpp::MessageInfo>(msg_info);
             end_tp_->update_reference_times(message_info->tp_infos_);
             publisher_->publish(message, std::move(message_info));//no need to change msg_info
         }else{
-            sink_tp_->update_finish_times(msg_info.tp_infos_);
-                std::cout<<"do something to handle the deadline miss"<<std::endl;
-            }else{
-                std::cout<<"finish within deadline, and the new remain_time is:"<<interneuron::TimePointManager::getInstance().get_remain_time("c1_sensor")<<std::endl;
-            }
+            sink_tp_->update_finish_times(message_info->tp_infos_);
         }
     }
 #else
