@@ -27,21 +27,30 @@ set(SOURCES
 )
 
 add_library(${PROJECT_NAME} ${SOURCES})
+#add_library(${PROJECT_NAME} SHARED ${SOURCES})
 
 #ament_target_dependencies(${PROJECT_NAME} interneuron_msgs)
 install(DIRECTORY include/${PROJECT_NAME}/
   DESTINATION include/${PROJECT_NAME}/
 )
+#install(TARGETS ${PROJECT_NAME}
+#  EXPORT export_${PROJECT_NAME}
+#  LIBRARY DESTINATION lib
+#  ARCHIVE DESTINATION lib
+#  RUNTIME DESTINATION bin
+#  INCLUDES DESTINATION include
+#)
 install(TARGETS ${PROJECT_NAME}
   EXPORT export_${PROJECT_NAME}
-  LIBRARY DESTINATION lib
-  ARCHIVE DESTINATION lib
-  RUNTIME DESTINATION bin
-  #INCLUDES DESTINATION include
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  INCLUDES DESTINATION include
 )
 
 
 ament_export_include_directories(include)
 ament_export_libraries(${PROJECT_NAME})
+ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
 
 ament_package()
