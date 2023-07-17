@@ -2,7 +2,7 @@
  * @Description: 
  * @Author: Sauron
  * @Date: 2023-07-09 18:44:57
- * @LastEditTime: 2023-07-12 17:15:00
+ * @LastEditTime: 2023-07-16 22:14:55
  * @LastEditors: Sauron
  */
 #ifndef INTERNEURON_LIB__SOURCE_TIME_POINT_HPP_
@@ -15,11 +15,12 @@ class SourceTimePoint : public TimePoint
 {
 	public:
 	//pay attention, here the deadline means the deadline since the last_sample_time
-	SourceTimePoint(uint64_t deadline, uint64_t period){
+	SourceTimePoint(std::string sensor_name, uint64_t deadline, uint64_t period){
 		deadline_ = deadline;
 		period_ = period;
 		last_sample_time_ = 0;
 		remain_time_ = 0;//the initialisation of remain_time_ is done by the sink
+		key_sensor_name = sensor_name;
 		#ifdef PRINT_DEBUG
 		std::cout<<"[Source][init]deadline:"<<deadline_<<", period:"<<period_<<", remain_time:"<<remain_time_<<std::endl;
 		#endif
@@ -84,12 +85,17 @@ class SourceTimePoint : public TimePoint
 			#endif
 			return Policy::QualityFirst;
 		}
+		#ifdef RECORD_LOG
+		tp_info.add_log(key_sensor_name,time_diff, period_);
+		#endif
 	}
 	private:
 	uint64_t deadline_;
 	uint64_t period_;
 	uint64_t remain_time_;// the strictest remain_time if multiple sinks exist
 	uint64_t last_sample_time_;
+
+	std::string key_sensor_name;
 };
 }
 #endif  // INTERNEURON_LIB__SOURCE_TIME_POINT_HPP_

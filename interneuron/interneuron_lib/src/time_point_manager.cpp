@@ -2,7 +2,7 @@
  * @Description: 
  * @Author: Sauron
  * @Date: 2023-05-10 17:26:18
- * @LastEditTime: 2023-07-11 23:29:36
+ * @LastEditTime: 2023-07-16 22:16:17
  * @LastEditors: Sauron
  */
 #include "interneuron_lib/time_point_manager.hpp"
@@ -13,7 +13,7 @@ using namespace interneuron;
 std::shared_ptr<SourceTimePoint> TimePointManager::add_source_timepoint(const std::string &sensor_name, uint64_t deadline, uint64_t period){
 	std::lock_guard<std::mutex> lock(this->source_mtx_);
     if (this->source_time_points_.find(sensor_name) == this->source_time_points_.end()){
-        this->source_time_points_[sensor_name]= std::make_shared<SourceTimePoint>(deadline, period);
+        this->source_time_points_[sensor_name]= std::make_shared<SourceTimePoint>(sensor_name, deadline, period);
     }else{
         assert(false);
         return nullptr;

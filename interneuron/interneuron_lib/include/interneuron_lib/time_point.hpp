@@ -2,7 +2,7 @@
  * @Description: 
  * @Author: Sauron
  * @Date: 2023-05-18 14:58:53
- * @LastEditTime: 2023-07-12 16:06:41
+ * @LastEditTime: 2023-07-16 19:58:09
  * @LastEditors: Sauron
  */
 #ifndef INTERNEURON_LIB__TIME_POINT_HPP_
@@ -16,6 +16,7 @@
 #include <chrono>
 #include <cstdint>
 #include <cassert>
+#include <tuple>
 namespace interneuron
 {
 	//the order shouldn't be changed
@@ -46,6 +47,12 @@ namespace interneuron
 		std::string print(){
 			return "this_sample_time:"+std::to_string(this_sample_time_)+", last_sample_time:"+std::to_string(last_sample_time_)+", remain_time:"+std::to_string(remain_time_);
 		}
+		#ifdef RECORD_LOG
+		void add_log(std::string timepoint, uint64_t current_time, uint64_t reference_time, uint64_t for_late_use=0){
+			logs[timepoint] = std::make_tuple(current_time, reference_time, for_late_use);
+		}
+		std::map<std::string,std::tuple> logs;//key is the id of TimePoint, value is the reference time of the point
+		#endif
 	};
 
 	INTERNEURON_PUBLIC
