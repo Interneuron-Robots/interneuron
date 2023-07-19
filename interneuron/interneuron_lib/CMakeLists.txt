@@ -5,52 +5,75 @@ project(interneuron_lib)
 if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 17)
 endif()
+
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-include_directories(include)
+add_compile_options(-DINTERNEURON -fPIC)
 
-if(${INTERNEURON})
-  add_compile_options(-DINTERNEURON -fPIC)
-endif()
 if(${PRINT_DEBUG})
   add_compile_options(-DPRINT_DEBUG)
 endif()
 
-find_package(ament_cmake REQUIRED)
-#find_package(rclcpp REQUIRED)
-#find_package(interneuron_msgs REQUIRED)
+if(${RECORD_LOG})
+  add_compile_options(-DRECORD_LOG)
+endif()
 
 set(SOURCES
   "src/time_point_manager.cpp"
+  "src/tools.cpp"
 )
 
 add_library(${PROJECT_NAME} ${SOURCES})
-#add_library(${PROJECT_NAME} SHARED ${SOURCES})
+add_executable(${PROJECT_NAME}_test "src/test.cpp")
+target_link_libraries(${PROJECT_NAME}_test ${PROJECT_NAME})
 
-#ament_target_dependencies(${PROJECT_NAME} interneuron_msgs)
-install(DIRECTORY include/${PROJECT_NAME}/
-  DESTINATION include/${PROJECT_NAME}/
-)
-#install(TARGETS ${PROJECT_NAME}
-#  EXPORT export_${PROJECT_NAME}
-#  LIBRARY DESTINATION lib
-#  ARCHIVE DESTINATION lib
-#  RUNTIME DESTINATION bin
-#  INCLUDES DESTINATION include
-#)
-install(TARGETS ${PROJECT_NAME}
-  EXPORT export_${PROJECT_NAME}
-  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+target_include_directories(${PROJECT_NAME} PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+
+# Enforce CMAKE_INSTALL_LIBDIR to be "lib"
+set(CMAKE_INSTALL_LIBDIR lib)
+
+install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}Targets
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-  INCLUDES DESTINATION include
 )
 
+install(EXPORT ${PROJECT_NAME}Targets
+  FILE ${PROJECT_NAME}Targets.cmake
+  NAMESPACE ${PROJECT_NAME}::
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+)
 
-ament_export_include_directories(include)
-ament_export_libraries(${PROJECT_NAME})
-ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
+install(DIRECTORY include/${PROJECT_NAME}
+  DESTINATION include)
 
-ament_package()
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+  ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
+  VERSION 1.0.0
+  COMPATIBILITY AnyNewerVersion
+)
+
+configure_package_config_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/cmake/${PROJECT_NAME}Config.cmake.in
+  ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
+  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+)
+
+install(
+  FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
+  DESTINATION
+    ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+)
+
+export(
+  EXPORT ${PROJECT_NAME}Targets
+  FILE ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Targets.cmake
+  NAMESPACE ${PROJECT_NAME}::
+)

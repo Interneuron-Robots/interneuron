@@ -2,7 +2,7 @@
  * @Description: 
  * @Author: Sauron
  * @Date: 2023-07-09 21:42:08
- * @LastEditTime: 2023-07-12 17:00:07
+ * @LastEditTime: 2023-07-18 16:48:48
  * @LastEditors: Sauron
  */
 #ifndef INTERNEURON_LIB__MIDDLE_TIME_POINT_HPP_
@@ -12,7 +12,8 @@ namespace interneuron
 {
 	class MiddleTimePoint : public TimePoint{
 		public:
-		MiddleTimePoint(const std::vector<std::string>&sensor_names){
+		MiddleTimePoint(const std::string key, const std::vector<std::string>&sensor_names){
+			key_ = key;
 			for(auto it = sensor_names.begin(); it != sensor_names.end(); it++){
 				reference_times_.insert(std::pair<std::string, uint64_t>(*it, 0));
 			}
@@ -22,7 +23,7 @@ namespace interneuron
 		Policy update_reference_times(std::map<std::string, TP_Info>&tp_infos, uint64_t update_ratio=30, uint64_t qos_ratio=30){
 			auto now_time = get_timestamp_in_ns();
 			Policy policy = Policy::QualityFirst;
-			lock();
+			std::lock_guard<std::mutex> lock(mtx_);
 			for(auto it = tp_infos.begin(); it != tp_infos.end(); it++){
 				auto new_policy = update_reference_time(it->first, now_time, it->second, update_ratio, qos_ratio);
 				if(new_policy == Policy::Error){
@@ -49,8 +50,8 @@ namespace interneuron
 				if(new_policy > policy){
 					policy = new_policy;
 				}
+
 			}
-			unlock();
 			return policy;
 		}
 
@@ -63,18 +64,21 @@ namespace interneuron
 				return Policy::Error;
 			}else{
 				auto new_time = now_time - tp_info.last_sample_time_;
+				auto old_time = it->second;
+				#ifdef RECORD_LOG
+				tp_info.add_log(key_,new_time,old_time);
+				#endif
 				//first time
 				if(it->second == 0){
 					it->second = new_time;
 					return Policy::QualityFirst;
 				}
-
-				auto old_time = it->second;
 				
 				it->second = (old_time * (100 - update_ratio) + new_time * update_ratio)/100;
 				#ifdef PRINT_DEBUG
 				std::cout<<"[Middle]old reference time:"<<old_time<<", new reference time:"<<new_time<<" updated:"<<it->second<<std::endl;
 				#endif
+				
 				if (old_time >= new_time){
 					return Policy::QualityFirst;
 				}
@@ -86,9 +90,11 @@ namespace interneuron
 				}
 				return Policy::QualityFirst;
 			}
+				
 		}
 		// the key for these maps is the sensor's name
 		std::map<std::string, uint64_t> reference_times_;
+		std::string key_;
 	};
 }
 #endif  // INTERNEURON_LIB__MIDDLE_TIME_POINT_HPP_

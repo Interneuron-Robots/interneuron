@@ -128,10 +128,10 @@ public:
         }
 #ifdef INTERNEURON
         subscription_ = this->create_subscription<test_msgs::msg::TestString>(sub_topic, 10, std::bind(&IntermediateNode::callback, this, _1, _2));
-        interneuron::TimePointManager::getInstance().add_middle_timepoint(subscription_->get_key_tp()+"sub", {"c1_sensor"});// for ros2
-        start_tp_ = interneuron::TimePointManager::getInstance().add_middle_timepoint(subscription_->get_key_tp()+"app", {"c1_sensor"});
+        interneuron::TimePointManager::getInstance().add_middle_timepoint(subscription_->get_key_tp()+"_sub", {"c1_sensor"});// for ros2
+        start_tp_ = interneuron::TimePointManager::getInstance().add_middle_timepoint(subscription_->get_key_tp()+"_app", {"c1_sensor"});
         if(publisher_!=nullptr){
-            end_tp_ = interneuron::TimePointManager::getInstance().add_middle_timepoint(publisher_->get_key_tp()+"pub", {"c1_sensor"});
+            end_tp_ = interneuron::TimePointManager::getInstance().add_middle_timepoint(publisher_->get_key_tp()+"_pub", {"c1_sensor"});
         }else{
             sink_tp_ = interneuron::TimePointManager::getInstance().add_sink_timepoint("sink", {"c1_sensor"});
         }

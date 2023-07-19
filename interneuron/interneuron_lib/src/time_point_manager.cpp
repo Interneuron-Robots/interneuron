@@ -2,7 +2,7 @@
  * @Description: 
  * @Author: Sauron
  * @Date: 2023-05-10 17:26:18
- * @LastEditTime: 2023-07-16 22:16:17
+ * @LastEditTime: 2023-07-19 09:54:39
  * @LastEditors: Sauron
  */
 #include "interneuron_lib/time_point_manager.hpp"
@@ -24,7 +24,7 @@ std::shared_ptr<SourceTimePoint> TimePointManager::add_source_timepoint(const st
 std::shared_ptr<MiddleTimePoint> TimePointManager::add_middle_timepoint(const std::string &key, const std::vector<std::string> &sensor_names){
     std::lock_guard<std::mutex> lock(this->middle_mtx_);
     if (this->middle_time_points_.find(key) == this->middle_time_points_.end()){
-        this->middle_time_points_[key]= std::make_shared<MiddleTimePoint>(sensor_names);
+        this->middle_time_points_[key]= std::make_shared<MiddleTimePoint>(key, sensor_names);
     }else{
         assert(false);
         return nullptr;

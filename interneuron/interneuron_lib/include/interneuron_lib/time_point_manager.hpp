@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Sauron
  * @Date: 2023-05-10 16:33:52
- * @LastEditTime: 2023-07-11 22:18:59
+ * @LastEditTime: 2023-07-17 09:47:57
  * @LastEditors: Sauron
  */
 
@@ -59,9 +59,9 @@ namespace interneuron
 		std::mutex source_mtx_;
 		std::mutex middle_mtx_;
 		std::mutex sink_mtx_;
-		std::map<std::string, std::shared_ptr<SourceTimePoint>> source_time_points_;// key is the sub/pub_id + "source"
-		std::map<std::string, std::shared_ptr<MiddleTimePoint>> middle_time_points_;// key is the sub/pub_id + "middle"
-		std::map<std::string, std::shared_ptr<SinkTimePoint>> sink_time_points_;// key is the sub/pub_id + "sink"
+		std::map<std::string, std::shared_ptr<SourceTimePoint>> source_time_points_;// key is the sub/pub_id + "_source"
+		std::map<std::string, std::shared_ptr<MiddleTimePoint>> middle_time_points_;// key is the sub/pub_id + "_sub/_pub/_app"
+		std::map<std::string, std::shared_ptr<SinkTimePoint>> sink_time_points_;// key is the sub/pub_id + "_sink"
 
 	};
 }

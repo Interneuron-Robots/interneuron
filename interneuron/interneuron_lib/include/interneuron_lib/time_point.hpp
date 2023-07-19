@@ -2,7 +2,7 @@
  * @Description: 
  * @Author: Sauron
  * @Date: 2023-05-18 14:58:53
- * @LastEditTime: 2023-07-16 19:58:09
+ * @LastEditTime: 2023-07-18 16:46:49
  * @LastEditors: Sauron
  */
 #ifndef INTERNEURON_LIB__TIME_POINT_HPP_
@@ -13,10 +13,11 @@
 #include "visibility_control.hpp"
 #include <memory>
 #include <iostream>
-#include <chrono>
 #include <cstdint>
 #include <cassert>
 #include <tuple>
+#include "tools.hpp"
+
 namespace interneuron
 {
 	//the order shouldn't be changed
@@ -48,10 +49,19 @@ namespace interneuron
 			return "this_sample_time:"+std::to_string(this_sample_time_)+", last_sample_time:"+std::to_string(last_sample_time_)+", remain_time:"+std::to_string(remain_time_);
 		}
 		#ifdef RECORD_LOG
-		void add_log(std::string timepoint, uint64_t current_time, uint64_t reference_time, uint64_t for_late_use=0){
-			logs[timepoint] = std::make_tuple(current_time, reference_time, for_late_use);
+		void add_log(std::string timepoint, uint64_t t0, uint64_t t1, uint64_t t2=0){
+			logs[timepoint] = std::make_tuple(t0, t1, t2);// usually, t0 si the current time ,t1 is the reference time
 		}
-		std::map<std::string,std::tuple> logs;//key is the id of TimePoint, value is the reference time of the point
+		std::string output_log(){
+			std::string res = "\"last_sample\":"+std::to_string(last_sample_time_)+",\"this_sample\":"+std::to_string(this_sample_time_)+",\"remain\":"+std::to_string(remain_time_)+",\"records\":[";
+			for(auto it = logs.begin(); it != logs.end(); it++){
+				res += "\"timepoint_id\":\""+it->first + "\",\"record\":[" + std::to_string(std::get<0>(it->second)) + "," + std::to_string(std::get<1>(it->second)) + "," + std::to_string(std::get<2>(it->second)) + "]},";
+			}
+			res[res.size()-1] = ']';//replace the last ','
+			
+			return res;
+		}
+		std::map<std::string,std::tuple<uint64_t,uint64_t,uint64_t>> logs;//key is the id of TimePoint, value is the reference time of the point
 		#endif
 	};
 
@@ -61,11 +71,6 @@ namespace interneuron
 		public:
 		TimePoint(){};
 		~TimePoint(){};
-
-		uint64_t get_timestamp_in_ns()
-		{
-			return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-		}
 
 		void lock()
 		{
