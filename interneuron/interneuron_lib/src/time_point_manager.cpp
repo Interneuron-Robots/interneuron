@@ -2,7 +2,7 @@
  * @Description: 
  * @Author: Sauron
  * @Date: 2023-05-10 17:26:18
- * @LastEditTime: 2023-07-19 09:54:39
+ * @LastEditTime: 2023-07-20 21:26:20
  * @LastEditors: Sauron
  */
 #include "interneuron_lib/time_point_manager.hpp"
@@ -10,6 +10,33 @@
 #include <cassert>
 using namespace interneuron;
 
+bool fusion_msgs(std::map<std::string, interneuron::TP_Info>&m0, std::map<std::string, interneuron::TP_Info>&m1, std::map<std::string, interneuron::TP_Info>&result, FusionPolicy policy){
+    switch(policy){
+        case FusionPolicy::EXACT_TIME:{
+            for(auto it = m0.begin(); it != m0.end(); it++){
+                if(m1.find(it->first) != m1.end()){
+                    if(m1[it->first].timestamp == it->second.timestamp){
+                        result.insert(std::pair<std::string, interneuron::TP_Info>(it->first, it->second));
+                    }else{
+                        std::cout<<"Error in fusion_msgs"<<std::endl;
+                        assert(false);
+                        return false;
+                    }
+                }
+            }
+            break;
+        }
+        case FusionPolicy::ALL_AVAILABLE:{
+            
+            break;
+        }
+        default:
+            std::cout<<"Error in fusion_msgs"<<std::endl;
+            assert(false);
+            return false;
+    }
+   return true; 
+}
 std::shared_ptr<SourceTimePoint> TimePointManager::add_source_timepoint(const std::string &sensor_name, uint64_t deadline, uint64_t period){
 	std::lock_guard<std::mutex> lock(this->source_mtx_);
     if (this->source_time_points_.find(sensor_name) == this->source_time_points_.end()){

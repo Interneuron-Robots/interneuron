@@ -2,7 +2,7 @@
  * @Description: 
  * @Author: Sauron
  * @Date: 2023-05-18 14:58:53
- * @LastEditTime: 2023-07-18 16:46:49
+ * @LastEditTime: 2023-07-20 16:56:25
  * @LastEditors: Sauron
  */
 #ifndef INTERNEURON_LIB__TIME_POINT_HPP_
@@ -35,6 +35,12 @@ namespace interneuron
 		Source,
 		Middle,
 		Sink,
+	};
+	INTERNEURON_PUBLIC
+	enum class FusionPolicy
+	{
+ 		EXACT_TIME,
+  		ALL_AVAILABLE
 	};
 
 	INTERNEURON_PUBLIC

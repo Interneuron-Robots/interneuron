@@ -2,7 +2,7 @@
  * @Description: 
  * @Author: Sauron
  * @Date: 2023-07-09 21:42:08
- * @LastEditTime: 2023-07-18 16:48:48
+ * @LastEditTime: 2023-07-20 20:53:07
  * @LastEditors: Sauron
  */
 #ifndef INTERNEURON_LIB__MIDDLE_TIME_POINT_HPP_

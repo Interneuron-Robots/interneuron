@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Sauron
  * @Date: 2023-05-10 16:33:52
- * @LastEditTime: 2023-07-17 09:47:57
+ * @LastEditTime: 2023-07-20 21:23:31
  * @LastEditors: Sauron
  */
 
@@ -20,6 +20,7 @@
 namespace interneuron
 {
 
+	bool fusion_msgs(std::map<std::string, interneuron::TP_Info>&m0, std::map<std::string, interneuron::TP_Info>&m1, std::map<std::string, interneuron::TP_Info>&result, FusionPolicy policy);
 	class TimePointManager
 	{
 	public:
