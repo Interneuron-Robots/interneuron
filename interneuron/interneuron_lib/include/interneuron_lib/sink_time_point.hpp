@@ -2,7 +2,7 @@
  * @Description: 
  * @Author: Sauron
  * @Date: 2023-07-10 11:14:13
- * @LastEditTime: 2023-07-18 16:50:10
+ * @LastEditTime: 2023-08-16 23:05:58
  * @LastEditors: Sauron
  */
 #ifndef INTERNEURON_LIB__SINK_TIME_POINT_HPP_
@@ -14,7 +14,7 @@ namespace interneuron{
 class SinkTimePoint : public TimePoint
 {
 	public:
-	SinkTimePoint(const std::vector<std::string>&sensor_names, const std::vector<std::shared_ptr<SourceTimePoint>>&source_time_points,const std::string& log_path="~/interneuron_log"){
+	SinkTimePoint(const std::vector<std::string>&sensor_names, const std::vector<std::shared_ptr<SourceTimePoint>>&source_time_points,const std::string& log_path="/home/sauron/interneuron_log"){
 		#ifdef RECORD_LOG
 		log_dir_ = log_path;
 		ofs_ = create_file(log_dir_, std::to_string(get_timestamp_in_ns()));
